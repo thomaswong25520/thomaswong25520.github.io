@@ -3,7 +3,7 @@ layout: post
 title: Building Your First Kafka Data Pipeline - A Step-by-Step Guide
 categories: [general, kafka, tutorial]
 tags: [kafka, data, tutorial]
-fullview: true
+description: I decided to build my own Kafka pipeline and wanted to document the process. If you’re interested, here’s how I did it and what I learned along the way.
 ---
 
 Step 1: Get Kafka

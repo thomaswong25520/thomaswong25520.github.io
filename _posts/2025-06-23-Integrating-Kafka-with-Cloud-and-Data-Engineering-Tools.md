@@ -3,7 +3,7 @@ layout: post
 title: Integrating Kafka with Cloud and Data Engineering Tools
 categories: [general, kafka]
 tags: [kafka, data, cloud, tools]
-fullview: true
+description: I love combining Kafka with cloud tools like AWS and Terraform in my projects. Here’s how I make it all work together and why it’s so powerful.
 ---
 
 Kafka’s true power shines when integrated with cloud platforms and modern data engineering tools. Here’s how to get started:

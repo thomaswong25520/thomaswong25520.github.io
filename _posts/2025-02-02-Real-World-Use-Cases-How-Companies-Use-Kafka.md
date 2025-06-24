@@ -3,7 +3,7 @@ layout: post
 title: Real-World Use Cases - How Companies Use Kafka
 categories: [general, kafka, use-case]
 tags: [kafka, data, use-case]
-fullview: true
+description: I’m always curious about how companies actually use Kafka, so I looked into some real-life examples. Here’s what I found and why it matters for anyone working with data.
 ---
 
 Kafka isn’t just a technology for tech giants—it’s used by companies of all sizes to solve real business challenges. Here’s how leading organizations leverage Kafka:

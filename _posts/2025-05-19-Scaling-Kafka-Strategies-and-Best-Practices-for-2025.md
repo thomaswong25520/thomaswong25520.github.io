@@ -3,7 +3,7 @@ layout: post
 title: Scaling Kafka - Strategies and Best Practices for 2025
 categories: [general, kafka]
 tags: [kafka, data, scaling, strategy]
-fullview: true
+description: As I experiment with scaling Kafka, I’ve picked up some practical strategies that work well. Here’s what I’ve found helps keep things running smoothly at scale.
 ---
 
 As your data needs grow, so must your Kafka deployment. Here are proven strategies for scaling Kafka in 2025.

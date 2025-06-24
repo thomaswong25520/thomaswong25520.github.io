@@ -3,7 +3,7 @@ layout: post
 title: Kafka Trends and Innovations in 2025
 categories: [general, kafka, data, trend, innovation]
 tags: [kafka, data, trend, innovation]
-fullview: true
+description: Keeping up with Kafka’s latest trends is part of my learning routine these days. Here’s what I think is most exciting and what you should keep an eye on this year.
 ---
 
 Kafka continues to evolve, and 2025 brings exciting new trends and innovations to the ecosystem.

@@ -3,7 +3,7 @@ layout: post
 title: What Is Apache Kafka and Why Should You Care
 categories: [general, kafka]
 tags: [kafka, data]
-fullview: true
+description: I’ve been digging into Kafka lately and wanted to share what I’ve learned about why it’s such a big deal in data engineering. Let me break down the basics and what makes it so useful for real-world projects.
 ---
 
 If you work with data—especially real-time data—you’ve likely heard of Apache Kafka. But what exactly is it, and why has it become so essential in modern data engineering?
