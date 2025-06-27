@@ -29,4 +29,12 @@ docker compose exec kafka kafka-console-consumer \
 
 <img src="/assets/media/27-06-web-events-pipeline/kafka_producer.png">
 
-<iframe width="420" height="315" src="/assets/media/27-06-web-events-pipeline/kafka-producer-events-simulation.mkv" frameborder="0" allowfullscreen></iframe>
+This video simulates real time web events being stored on our Kafka topic.
+On the right window, the events are being generated while on the left window, the events are being stored as json data on our kafka topic
+
+<div class="video-demo">
+  <video autoplay loop muted playsinline>
+    <source src="/kafka-producer-events-simulation.mp4" type="video/mp4">
+    Votre navigateur ne supporte pas la lecture de cette vidéo.
+  </video>
+</div>
