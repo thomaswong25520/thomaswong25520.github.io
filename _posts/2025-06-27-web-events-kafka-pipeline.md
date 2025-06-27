@@ -34,7 +34,7 @@ On the right window, the events are being generated while on the left window, th
 
 <div class="video-demo">
   <video autoplay loop muted playsinline>
-    <source src="/kafka-producer-events-simulation.mp4" type="video/mp4">
+    <source src="/assets/media/27-06-web-events-pipeline/kafka-producer-events-simulation.mp4" type="video/mp4">
     Votre navigateur ne supporte pas la lecture de cette vidéo.
   </video>
 </div>
