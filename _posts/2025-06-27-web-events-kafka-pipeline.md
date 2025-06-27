@@ -1,27 +1,32 @@
 ---
 layout: post
-title: Integrating Kafka with Cloud and Data Engineering Tools
+title: Kafka data pipeline - Web events
 categories: [general, kafka]
 tags: [kafka, data, cloud, tools]
-description: I love combining Kafka with cloud tools like AWS and Terraform in my projects. Here’s how I make it all work together and why it’s so powerful.
+description: I tried to build a web events kafka data pipeline with Python
 ---
 
-Kafka’s true power shines when integrated with cloud platforms and modern data engineering tools. Here’s how to get started:
+### Create the Kafka server and the kafka topic
 
-1. Deploy Kafka on AWS
-   Use AWS EC2 or managed services like Amazon MSK to run Kafka in the cloud. Terraform can automate infrastructure provisioning for repeatable, scalable deployments.
+{% highlight yaml %}
+docker compose exec kafka kafka-topics --create \
+ --topic web-events \
+ --bootstrap-server localhost:9092 \
+ --partitions 1 \
+ --replication-factor 1
+{% endhighlight %}
 
-2. Connect Kafka to Data Lakes and Warehouses
-   Use Kafka Connect to stream data into AWS S3, Redshift, or other storage solutions. This enables real-time analytics and long-term data retention.
+### Check our kafka server to see the events stored in the topic
 
-3. Automate with Terraform
-   Define your Kafka infrastructure as code with Terraform. This makes it easy to manage, update, and replicate your environment across regions.
+{% highlight yaml %}
+docker compose exec kafka kafka-console-consumer \
+ --bootstrap-server localhost:9092 \
+ --topic web-events \
+ --from-beginning
+{% endhighlight %}
 
-4. Leverage Python for Data Processing
-   Write custom producers and consumers in Python to process and analyze data streams. Integrate with libraries like Pandas or PySpark for advanced analytics.
+### Python script to simulate real time web events
 
-5. Monitor and Optimize
-   Use AWS CloudWatch or open-source tools to monitor Kafka performance and troubleshoot issues.
+<img src="/assets/media/27-06-web-events-pipeline/kafka_producer.png">
 
-Why It Matters
-By integrating Kafka with cloud and data engineering tools, you can build robust, scalable data pipelines that power real-time analytics, automation, and business insights.
+<iframe width="420" height="315" src="/assets/media/27-06-web-events-pipeline/kafka-producer-events-simulation.mkv" frameborder="0" allowfullscreen></iframe>
