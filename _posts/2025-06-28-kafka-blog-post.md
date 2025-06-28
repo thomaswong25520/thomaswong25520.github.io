@@ -12,7 +12,7 @@ I recently built a real-time data pipeline to understand how platforms like Netf
 
 ## Quick Setup
 
-Let's get straight to it. You'll need Docker and Python installed.
+You'll need Docker and Python installed.
 
 ### Docker Configuration
 
@@ -103,7 +103,7 @@ Keep this running in a terminal - you'll see events appear as they're produced.
 
 Here's a Python producer that simulates realistic web traffic:
 
-<img src="/assets/media/27-06-web-events-pipeline/kafka-producer-code">
+<img src="/assets/media/27-06-web-events-pipeline/kafka-producer-code.png">
 
 This script generates different types of events (page views, clicks, purchases) with realistic data. Each event includes user information, timestamps, and relevant metadata.
 
