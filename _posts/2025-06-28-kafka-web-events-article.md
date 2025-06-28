@@ -10,7 +10,7 @@ description: "A hands-on guide to building a web events Kafka data pipeline with
 
 Ever wondered how major platforms like Netflix, LinkedIn, or Spotify handle millions of user interactions in real-time? The answer often involves **Apache Kafka**. Today, I'll walk you through building your own web events data pipeline using Kafka and Python.
 
-This isn't just theory - we'll get our hands dirty with actual code and see everything working in real-time. By the end, you'll have a complete understanding of how producers send events and consumers process them.
+By the end of this article, you'll have a complete understanding of how producers send events and consumers process them.
 
 ## Setting Up Our Kafka Infrastructure
 
@@ -58,13 +58,13 @@ It's like having a live feed of everything happening on your platform. Leave thi
 
 ## The Producer: Simulating Real Web Traffic
 
-Now for the fun part! Let's simulate realistic web events - imagine users clicking buttons, viewing pages, making purchases, all happening simultaneously across your website.
+Let's simulate realistic web events - imagine users clicking buttons, viewing pages, making purchases, all happening simultaneously across your website.
 
 ### Python script to simulate real time web events
 
-<img src="/assets/media/27-06-web-events-pipeline/kafka_producer.png">
+<img src="/assets/media/27-06-web-events-pipeline/kafka-producer-code">
 
-Here's where the magic happens. Our Python producer generates realistic web events and streams them to Kafka in real-time. Each event contains structured data about user interactions - exactly what you'd see on a real website.
+Now, our Python producer generates realistic web events and streams them to Kafka in real-time. Each event contains structured data about user interactions - exactly what you'd see on a real website.
 
 **Watch this in action:**
 
