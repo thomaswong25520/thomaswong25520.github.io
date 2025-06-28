@@ -38,3 +38,16 @@ On the right window, the events are being generated while on the left window, th
     Votre navigateur ne supporte pas la lecture de cette vidéo.
   </video>
 </div>
+
+### Python script to run the client running listening to the real time web events on kafka server
+
+{% highlight yaml %}
+python3 simple_consumer.py
+{% endhighlight %}
+
+<div class="video-demo">
+  <video autoplay loop muted playsinline>
+    <source src="/kafka-consumer-events-simulation.mkv" type="video/x-matroska">
+    Votre navigateur ne supporte pas la lecture de cette vidéo.
+  </video>
+</div>
