@@ -19,7 +19,7 @@ Let's get straight to it. You'll need Docker and Python installed.
 Create a `docker-compose.yml` file:
 
 ```yaml
-version: '3'
+version: "3"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -28,7 +28,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 22181:2181
-  
+
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -43,6 +43,7 @@ services:
 ```
 
 Start everything with:
+
 ```bash
 docker-compose up -d
 ```
@@ -68,6 +69,7 @@ docker compose exec kafka kafka-topics --create \
 ```
 
 Breaking down each parameter:
+
 - `docker compose exec kafka` - Executes a command inside the Kafka container
 - `kafka-topics --create` - Uses Kafka's topic management tool to create a new topic
 - `--topic web-events` - Names our topic "web-events" (where all events will be stored)
@@ -89,6 +91,7 @@ docker compose exec kafka kafka-console-consumer \
 ```
 
 What each part does:
+
 - `kafka-console-consumer` - Built-in Kafka tool for reading messages from topics
 - `--bootstrap-server localhost:9092` - Connects to our Kafka broker
 - `--topic web-events` - Specifies which topic to read from
@@ -125,6 +128,7 @@ Now let's build a consumer to process these events in real-time:
 <img src="/assets/media/27-06-web-events-pipeline/kafka-consumer-code.png">
 
 Run it with:
+
 ```bash
 python3 simple_consumer.py
 ```
@@ -155,6 +159,7 @@ This event-driven approach offers several advantages:
 ## Practical Applications
 
 With this basic pipeline, you can build:
+
 - Real-time analytics dashboards
 - User activity tracking systems
 - Event-driven microservices
@@ -163,12 +168,6 @@ With this basic pipeline, you can build:
 
 The same pattern scales from hobby projects to enterprise systems handling millions of events per second.
 
-## Next Steps
-
-Once you're comfortable with this setup, consider:
-- Adding multiple partitions for parallel processing
-- Implementing consumer groups for load balancing
-- Using Avro or Protobuf for schema management
-- Integrating with stream processing frameworks like Kafka Streams
+## Conclusion
 
 This pipeline demonstrates the core concepts behind modern event-driven architectures. Start small, experiment, and scale as needed.
