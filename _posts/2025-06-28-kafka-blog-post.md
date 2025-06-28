@@ -50,6 +50,15 @@ docker-compose up -d
 
 ### Python Dependencies
 
+First, create and activate a virtual environment:
+
+```bash
+python3 -m venv kafka-env
+source kafka-env/bin/activate # On Windows: kafka-env\Scripts\activate
+```
+
+Then install the required package:
+
 ```bash
 pip install kafka-python
 ```
