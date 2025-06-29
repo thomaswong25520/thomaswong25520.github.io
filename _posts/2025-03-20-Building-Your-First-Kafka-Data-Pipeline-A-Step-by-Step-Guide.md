@@ -61,4 +61,3 @@ $ bin/kafka-console-consumer.sh --topic quickstart-events --from-beginning --boo
 {% highlight yaml %}
 $ bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic connect-test --from-beginning
 {% endhighlight %}
-<img src="/assets/media/docker-kafka-consumer.png">

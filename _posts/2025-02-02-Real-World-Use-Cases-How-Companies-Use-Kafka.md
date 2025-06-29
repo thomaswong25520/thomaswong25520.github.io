@@ -20,5 +20,6 @@ Kafka isn’t just a technology for tech giants—it’s used by companies of al
 - E-commerce
   Online retailers use Kafka to process orders, track inventory, and analyze customer behavior—all in real time. This helps them optimize operations and improve customer experiences.
 
-Why It Matters
+## Why It Matters
+
 By centralizing and processing data streams in real time, Kafka helps companies make faster, data-driven decisions and stay competitive in a rapidly changing world.

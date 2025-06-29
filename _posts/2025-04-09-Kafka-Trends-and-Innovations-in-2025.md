@@ -20,5 +20,6 @@ Kafka continues to evolve, and 2025 brings exciting new trends and innovations t
 4. Democratization of Kafka
    Kafka is no longer just for large enterprises. Smaller teams and startups are adopting Kafka for real-time analytics, microservices, and event-driven architectures.
 
-Why It Matters
+## Why It Matters
+
 These trends make Kafka more accessible, scalable, and essential for modern data strategies. Whether you’re an enterprise or a startup, Kafka’s ecosystem offers powerful tools for building the next generation of data-driven applications.
