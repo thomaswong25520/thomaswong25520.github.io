@@ -8,11 +8,11 @@ description: "How I built a web events Kafka pipeline with Python - from setup t
 
 # Building a Real-Time Web Events Pipeline with Kafka and Python
 
-I recently built a real-time data pipeline to understand how platforms like Netflix and Spotify handle millions of user interactions. Here's what I learned using Apache Kafka and Python.
+Recently, I built a real-time data pipeline to see how kafka was working practically. In this project, the concept of kafka broker, topic, producer, consumer are being shown. Before diving into the steps to follow, let's first setup our environment.
 
 ## Quick Setup
 
-You'll need Docker and Python installed.
+First, we will need to use Docker to install kafka and all the needed dependencies, this helps to ensure we encapsulate the tools we need and isolate it from our global system. Then, we will need to install Python.
 
 ### Docker Configuration
 
@@ -42,6 +42,11 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 ```
 
+The docker file contains 2 services: zookeeper and kafka
+
+- Zookeeper is needed for Kafka to work because zookeeper is what we call a distributed coordination service, it ensures the latest works as per expected given its supervisor role, we will discuss about this specific in another article
+- Kafka obviously since it's the core technology we are testing out
+
 Start everything with:
 
 ```bash
@@ -50,7 +55,7 @@ docker-compose up -d
 
 ### Python Dependencies
 
-First, create and activate a virtual environment:
+Then, following the same idea with the docker container to isolate our dev environment, we will create and activate a virtual environment:
 
 ```bash
 python3 -m venv kafka-env
@@ -63,11 +68,11 @@ Then install the required package:
 pip install kafka-python
 ```
 
-That's all you need to get started.
+That's all we need to get started
 
 ## Creating the Kafka Infrastructure
 
-First, create a topic to store web events:
+Ok now we will create a topic to store web events:
 
 ```bash
 docker compose exec kafka kafka-topics --create \
@@ -79,18 +84,18 @@ docker compose exec kafka kafka-topics --create \
 
 Breaking down each parameter:
 
-- `docker compose exec kafka` - Executes a command inside the Kafka container
-- `kafka-topics --create` - Uses Kafka's topic management tool to create a new topic
-- `--topic web-events` - Names our topic "web-events" (where all events will be stored)
-- `--bootstrap-server localhost:9092` - Connects to the Kafka broker on port 9092
-- `--partitions 1` - Creates a single partition (keeps it simple for development)
-- `--replication-factor 1` - No replication since we're running a single broker
+- `docker compose exec kafka` - We execute a command inside the Kafka container
+- `kafka-topics --create` - This uses Kafka's topic management tool to create a new topic
+- `--topic web-events` - We name our topic "web-events" (where all events will be stored)
+- `--bootstrap-server localhost:9092` - We connects to the Kafka broker on port 9092
+- `--partitions 1` - We create a single partition (keeping it simple for development)
+- `--replication-factor 1` - We don't have replication since we're running a single broker
 
 This creates a `web-events` topic where all user interactions will be stored. Think of it as a dedicated stream for your event data.
 
 ### Monitoring Events in Real-Time
 
-To see events as they flow through your topic:
+To see events as they flow through the topic, we will need to run this command:
 
 ```bash
 docker compose exec kafka kafka-console-consumer \
@@ -101,20 +106,20 @@ docker compose exec kafka kafka-console-consumer \
 
 What each part does:
 
-- `kafka-console-consumer` - Built-in Kafka tool for reading messages from topics
-- `--bootstrap-server localhost:9092` - Connects to our Kafka broker
-- `--topic web-events` - Specifies which topic to read from
-- `--from-beginning` - Reads all messages from the start (not just new ones)
+- `kafka-console-consumer` - This is a Built-in Kafka tool for reading messages from topics
+- `--bootstrap-server localhost:9092` - This connect to our Kafka broker
+- `--topic web-events` - This specifies which topic to read from
+- `--from-beginning` - This reads all messages from the start (not just new ones)
 
-Keep this running in a terminal - you'll see events appear as they're produced.
+We will need to keep this running in a terminal - we will see events appear as they're being produced by our producer
 
 ## The Producer: Generating Web Events
 
-Here's a Python producer that simulates realistic web traffic:
+In the screenshot below, this is our python producer that simulates realistic web traffic:
 
 <img src="/assets/media/27-06-web-events-pipeline/kafka-producer-code.png">
 
-This script generates different types of events (page views, clicks, purchases) with realistic data. Each event includes user information, timestamps, and relevant metadata.
+This script generates different types of events (page views, clicks, purchases) with realistic data as we would expect from a user on a website selling stuffs. Each event includes user information, timestamps, and relevant metadata.
 
 **See it in action:**
 
@@ -126,7 +131,7 @@ This script generates different types of events (page views, clicks, purchases) 
   </video>
 </div>
 
-**What you're seeing:** The producer (right window) generates web events every few seconds - user clicks, page views, purchases. The left window shows the Kafka topic receiving and storing these events as JSON data. Notice how each event is timestamped and contains realistic user interaction data.
+**What you're seeing:** The producer (right window) generates web events every few seconds - user clicks, page views, purchases. The left window shows the Kafka topic receiving and storing these events as JSON data.
 
 This simulates what happens millions of times per day on platforms like Amazon or Facebook - user actions being captured and streamed for real-time processing.
 
@@ -179,4 +184,4 @@ The same pattern scales from hobby projects to enterprise systems handling milli
 
 ## Conclusion
 
-This pipeline demonstrates the core concepts behind modern event-driven architectures. Start small, experiment, and scale as needed.
+This pipeline demonstrates the core concepts behind modern event-driven architectures, though this pipeline's simulation only handles few requests, the idea was to show how it works through a lab. It was interesting to see the interaction of the producer-kafka broker-consumer.
