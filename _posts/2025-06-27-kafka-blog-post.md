@@ -119,6 +119,12 @@ In the screenshot below, this is our python producer that simulates realistic we
 
 <img src="/assets/media/27-06-web-events-pipeline/kafka-producer-code.png">
 
+Run it with:
+
+```bash
+python3 web_producer.py
+```
+
 This script generates different types of events (page views, clicks, purchases) with realistic data as we would expect from a user on a website selling stuffs. Each event includes user information, timestamps, and relevant metadata.
 
 **See it in action:**
