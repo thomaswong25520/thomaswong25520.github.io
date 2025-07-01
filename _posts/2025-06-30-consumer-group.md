@@ -135,11 +135,9 @@ watch -n 2 'docker compose exec kafka kafka-consumer-groups --describe \
 2. Watch the monitoring terminal
 3. After couple of seconds, Kafka detects the failure and reassigns the partition
 
-Pay attention to the `CONSUMER-ID` column.
-Each partition is assigned to a specific consumer.
-The consumer 2 is terminated (green, with consumer ID ending with `a9b`) the partition is reassigned to another consumer, here it is reassigned to consumer 3 (in blue) we can see it has been reassigned to its consumer ID ending with `86e`
-
-Finally, when the consumer 3 is terminated, all his load is reassigned to consumer 1 (in red, whose consumer ID ends with `f6f`)
+Pay attention to the CONSUMER-ID column - each partition is initially assigned to a specific consumer.
+When Consumer 2 (green, with ID ending in a9b) is terminated, watch how Kafka automatically reassigns its partition. In this demo, partition 1 gets redistributed to Consumer 3 (blue, with ID ending in 86e).
+Subsequently, when Consumer 3 is terminated, both its original partition and the inherited one are reassigned to the remaining Consumer 1 (red, with ID ending in f6f), demonstrating how a single consumer can handle multiple partitions when needed.
 
 ### Demo: Rebalancing in Action
 
