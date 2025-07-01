@@ -1,73 +1,82 @@
 ---
 layout: post
-title: "Implementing 3 consumers in a consumer group and viewing rebalancing"
+title: "Implementing Consumer Groups and Observing Kafka Rebalancing"
 categories: [general, kafka]
 tags: [kafka, data, cloud, tools, streaming, python]
-description: "How I built 3 consumers in a consumer group using Kafka-Python"
+description: "A practical guide to implementing consumer groups and understanding Kafka's rebalancing mechanism"
 ---
 
 # Introduction
 
-In this article, I want to show how to deploy multiple consumers in a consumer group and put in evidence the concept of rebalancing.
+In this article, I'll demonstrate how to deploy multiple consumers within a consumer group and observe Kafka's automatic rebalancing mechanism in action. This builds upon my previous post about basic Kafka producers and consumers.
 
-## Pre-requisites
+## Prerequisites
 
-### Python Dependencies
+Before diving in, ensure you have Docker and Python installed on your system.
 
-Following the same idea with the docker container to isolate our dev environment, we will create and activate a virtual environment:
+### Setting Up the Python Environment
+
+Create and activate a virtual environment to keep dependencies isolated:
 
 ```bash
 python3 -m venv kafka-env
-source kafka-env/bin/activate # On Windows: kafka-env\Scripts\activate
-```
+source kafka-env/bin/activate  # On Windows: kafka-env\Scripts\activate
 
-Then install the required package:
-
-```bash
+# Install the required package
 pip install kafka-python
 ```
 
-## First steps
+## Creating a Multi-Partition Topic
 
-First we will have to create another kafka topic with 3 partitions this time.
+Unlike single-partition topics, we need multiple partitions to demonstrate consumer group behavior effectively.
 
-Run this command below to do so
-
-```
+```bash
+# Create a topic with 3 partitions
 docker compose exec kafka kafka-topics --create \
     --topic web-events-partitioned \
     --bootstrap-server localhost:9092 \
     --partitions 3 \
     --replication-factor 1
-```
 
-We can then check if it has indeed 3 partitions
-
-```
+# Verify the partitions
 docker compose exec kafka kafka-topics --describe \
     --topic web-events-partitioned \
     --bootstrap-server localhost:9092
 ```
 
-In the output, we should end up with something like this, as per the screenshot below:
+You should see output confirming 3 partitions:
 
-<img src="/assets/media/30-06-consumer-group-lab/partitioned-topic.png">
+<img src="/assets/media/30-06-consumer-group-lab/partitioned-topic.png" alt="Kafka topic with 3 partitions">
 
-## Python scripts
+## Implementation
 
-The python scripts are available in my github page, in order not to overload this article, I have decided not to integrate them in this page.
-Feel free to check the code source <a href="https://github.com/thomaswong25520/kafka-code/tree/main/02-group_demo_consumers">here</a>.
+The complete Python scripts are available on my [GitHub repository](https://github.com/thomaswong25520/kafka-code/tree/main/02-group_demo_consumers). Here's what each script does:
 
-## Testing phase
+- **`consumer_group_partitioned.py`**: Launches 3 consumers in a single process
+- **`partitioned_producer.py`**: Produces messages with user IDs as keys for consistent partitioning
+- **`setup_partitioned_topic.sh`**: Helper script to create the partitioned topic
 
-1 - First let's run our consumer by executing the following command `python3 consumer_group_partitioned.py`
+## Running the Consumer Group Demo
 
-2 - Then, let's run the producer script
-`python3 partitioned_producer.py`
+### Step 1: Start the Consumer Group
 
-3 - Then, we can monitor in real time what is being pushed to our kafka broker
-
+```bash
+python3 consumer_group_partitioned.py
 ```
+
+### Step 2: Start the Producer
+
+In a new terminal:
+
+```bash
+python3 partitioned_producer.py
+```
+
+### Step 3: Monitor the Message Flow (Optional)
+
+To see messages being distributed across partitions:
+
+```bash
 docker compose exec kafka kafka-console-consumer \
     --bootstrap-server localhost:9092 \
     --topic web-events-partitioned \
@@ -77,26 +86,9 @@ docker compose exec kafka kafka-console-consumer \
     --from-beginning
 ```
 
-## Creating the partitioned topics
+### Demo: Consumer Group in Action
 
-```
-chmod +x setup_partitioned_topic.sh
-./setup_partitioned_topic.sh
-```
-
-## Start the consumer group (in one terminal)
-
-`python3 consumer_group_partitioned.py`
-
-## Start the producer (in another terminal):
-
-`python3 partitioned_producer.py`
-
-#### Group consumer demo
-
-In the demo video below, we can see the bottom right terminal shows different output in different color, each color representing a consumer.
-
-This put in evidence the concept of consumer group, each consumer will be given a partition (resp 0, 1 or 2) to handle the traffic load
+In the demo below, notice how each consumer (represented by a different color) handles exactly one partition. This demonstrates Kafka's load distribution:
 
 <div class="video-demo">
   <video autoplay loop muted playsinline>
@@ -106,35 +98,50 @@ This put in evidence the concept of consumer group, each consumer will be given 
   </video>
 </div>
 
-## Rebalancing
+## Testing Kafka Rebalancing
 
-Ok now let's see what happens in kafka broker and consumers side when a consumer is shut down or timeouts
+Now for the interesting part: what happens when a consumer fails?
 
-The theory says the load will be rebalanced among the remaining consumers, let's put that in evidence
+### Setting Up Individual Consumers
 
-For this, we will need to re-create the consumers because the current one are being lunched via the same script and we want to shut down consumers one by one.
+To properly test rebalancing, we need to run each consumer in its own process. I've created a [`single_consumer.py`](https://github.com/thomaswong25520/kafka-code/blob/main/03-rebalancing/single_consumer.py) script for this purpose.
 
-For this, I have made this <a href="https://github.com/thomaswong25520/kafka-code/blob/main/03-rebalancing/single_consumer.py">script</a>. to launch a single consumer and will launch 3 consumers, each consumer being launched via a single terminal
+Launch three consumers in separate terminals:
 
-Then, after cloning the github repo, run this script
+```bash
+# Terminal 1
+python3 single_consumer.py 1
 
-`python3 single_consumer.py`
+# Terminal 2
+python3 single_consumer.py 2
 
-Now, the idea is to monitor by running the following command on a terminal
-
+# Terminal 3
+python3 single_consumer.py 3
 ```
-bash
 
+### Monitoring the Rebalancing Process
+
+In a fourth terminal, monitor the consumer group status:
+
+```bash
 watch -n 2 'docker compose exec kafka kafka-consumer-groups --describe \
     --group web-events-group \
     --bootstrap-server localhost:9092'
 ```
 
-This command monitors our kafka cluster by refreshing it every 2 seconds.
+### Triggering a Rebalance
 
-We can observe the rebalancing of traffic by keeping an eye on the `CONSUMER_ID` column, each line has a unique `CONSUMER_ID` and when a consumer is killed, the `CONSUMER_ID` will be given to another consumer
+1. Kill one of the consumers (Ctrl+C)
+2. Watch the monitoring terminal
+3. After couple of seconds, Kafka detects the failure and reassigns the partition
 
-#### We can see the results in the demo below
+Pay attention to the `CONSUMER-ID` column.
+Each partition is assigned to a specific consumer.
+The consumer 2 is terminated (green, with consumer ID ending with `a9b`) the partition is reassigned to another consumer, here it is reassigned to consumer 3 (in blue) we can see it has been reassigned to its consumer ID ending with `86e`
+
+Finally, when the consumer 3 is terminated, all his load is reassigned to consumer 1 (in red, whose consumer ID ends with `f6f`)
+
+### Demo: Rebalancing in Action
 
 <div class="video-demo">
   <video autoplay loop muted playsinline>
@@ -144,6 +151,15 @@ We can observe the rebalancing of traffic by keeping an eye on the `CONSUMER_ID`
   </video>
 </div>
 
+## Key Takeaways
+
+1. **Automatic Load Distribution**: Kafka automatically assigns partitions to consumers in a group
+2. **Fault Tolerance**: When a consumer fails, its partitions are redistributed to healthy consumers
+3. **No Message Loss**: During rebalancing, no messages are lost - they're simply processed by different consumers
+4. **Scalability**: You can add or remove consumers dynamically, and Kafka handles the rebalancing
+
 ## Conclusion
 
-We have put in evidence how consumer group work and how rebalancing work too in case a consumer shuts down / timeouts
+This demonstration shows the power of Kafka's consumer groups and automatic rebalancing.
+In production environments, this mechanism ensures high availability and efficient resource utilization without manual intervention.
+Whether you're handling millions of events or building a simple event-driven system, understanding these concepts is crucial for building robust streaming applications.
