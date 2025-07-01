@@ -56,7 +56,7 @@ In the output, we should end up with something like this, as per the screenshot 
 ## Python scripts
 
 The python scripts are available in my github page, in order not to overload this article, I have decided not to integrate them in this page.
-Feel free to check the code source <a href="https://github.com/thomaswong25520">here</a>.
+Feel free to check the code source <a href="https://github.com/thomaswong25520/kafka-code/tree/main/02-group_demo_consumers">here</a>.
 
 ## Testing phase
 
@@ -67,38 +67,30 @@ Feel free to check the code source <a href="https://github.com/thomaswong25520">
 
 3 - Then, we can monitor in real time what is being pushed to our kafka broker
 
-````docker compose exec kafka kafka-console-consumer \
+```
+docker compose exec kafka kafka-console-consumer \
     --bootstrap-server localhost:9092 \
     --topic web-events-partitioned \
     --property print.key=true \
     --property print.partition=true \
     --property print.offset=true \
-    --from-beginning```
+    --from-beginning
+```
 
 ## Creating the partitioned topics
 
-````
-
+```
 chmod +x setup_partitioned_topic.sh
 ./setup_partitioned_topic.sh
-
 ```
 
 ## Start the consumer group (in one terminal)
 
-```
-
-python3 consumer_group_partitioned.py
-
-```
+`python3 consumer_group_partitioned.py`
 
 ## Start the producer (in another terminal):
 
-```
-
-python3 partitioned_producer.py
-
-````
+`python3 partitioned_producer.py`
 
 #### Group consumer demo
 
@@ -122,11 +114,11 @@ The theory says the load will be rebalanced among the remaining consumers, let's
 
 For this, we will need to re-create the consumers because the current one are being lunched via the same script and we want to shut down consumers one by one.
 
-For this, I have made this <a href="https://github.com/thomaswong25520">script</a>. to launch a single consumer and will launch 3 consumers, each consumer being launched via a single terminal
+For this, I have made this <a href="https://github.com/thomaswong25520/kafka-code/blob/main/03-rebalancing/single_consumer.py">script</a>. to launch a single consumer and will launch 3 consumers, each consumer being launched via a single terminal
 
 Then, after cloning the github repo, run this script
 
-```python3 single_consumer.py```
+`python3 single_consumer.py`
 
 Now, the idea is to monitor by running the following command on a terminal
 
@@ -155,4 +147,3 @@ We can observe the rebalancing of traffic by keeping an eye on the `CONSUMER_ID`
 ## Conclusion
 
 We have put in evidence how consumer group work and how rebalancing work too in case a consumer shuts down / timeouts
-````
