@@ -1,16 +1,16 @@
 ---
 layout: post
-title: "Understanding Kafka Cluster Membership: How Brokers Join and Leave the Cluster"
+title: "[KAFKA INTERNALS] - Understanding Kafka Cluster Membership: How Brokers Join and Leave the Cluster"
 categories: [general, kafka]
 tags: [kafka, data, cloud, tools, streaming, internals, cluster]
 description: "Deep dive into Kafka's cluster membership mechanism, exploring how brokers register, maintain heartbeats, and handle failures in both ZooKeeper and KRaft modes"
 ---
 
-# Understanding Kafka Cluster Membership: How Brokers Join and Leave the Cluster
+## Understanding Kafka Cluster Membership: How Brokers Join and Leave the Cluster
 
 Apache Kafka's reliability and scalability heavily depend on its cluster membership mechanism. This system allows brokers to discover each other, maintain a consistent view of the cluster state, and handle failures gracefully. In this deep dive, we'll explore how Kafka manages cluster membership, examine the actual source code, and understand the differences between ZooKeeper and KRaft modes.
 
-## What is Cluster Membership?
+### What is Cluster Membership?
 
 **Cluster Membership** is the fundamental mechanism that enables Kafka brokers to:
 
@@ -21,9 +21,9 @@ Apache Kafka's reliability and scalability heavily depend on its cluster members
 
 This system ensures that the cluster controller always has an accurate view of which brokers are available and operational.
 
-## Architecture Overview
+### Architecture Overview
 
-### ZooKeeper Mode (Traditional)
+#### ZooKeeper Mode (Traditional)
 
 ```
 Broker 1 ──┐
@@ -31,7 +31,7 @@ Broker 2 ──┼── ZooKeeper ──── Controller Broker
 Broker 3 ──┘
 ```
 
-### KRaft Mode (New)
+#### KRaft Mode (New)
 
 ```
 Broker 1 ──┐
@@ -39,312 +39,312 @@ Broker 2 ──┼── Controller Quorum (Dedicated Controllers)
 Broker 3 ──┘
 ```
 
-## Core Components and Source Code Analysis
+### Core Components and Source Code Analysis
 
 Let's examine the key components that implement cluster membership in Kafka's source code.
 
-### 1. ClusterControlManager - The Controller Side
+#### 1. ClusterControlManager - The Controller Side
 
 The `ClusterControlManager` class handles broker registration and lifecycle management from the controller's perspective:
 
-{% highlight java linenos %}
+```java
 // From: metadata/src/main/java/org/apache/kafka/controller/ClusterControlManager.java
 
-/\*\*
+/**
+ * Manages broker registration and status in the cluster
+ */
+public class ClusterControlManager {
 
-- Manages broker registration and status in the cluster
-  \*/
-  public class ClusterControlManager {
-      /**
-       * Processes a broker registration request
-       */
-      public ControllerResult<BrokerRegistrationReply> registerBroker(
-              BrokerRegistrationRequestData request,
-              long offset,
-              FeatureControlManager featureControl) {
+    /**
+     * Processes a broker registration request
+     */
+    public ControllerResult<BrokerRegistrationReply> registerBroker(
+            BrokerRegistrationRequestData request,
+            long offset,
+            FeatureControlManager featureControl) {
 
-          int brokerId = request.brokerId();
-          List<ApiMessageAndVersion> records = new ArrayList<>();
+        int brokerId = request.brokerId();
+        List<ApiMessageAndVersion> records = new ArrayList<>();
 
-          // Basic validations
-          if (heartbeatManager.hasValidSession(brokerId)) {
-              // Broker already registered with valid session
-              throw new StaleBrokerEpochException("Broker " + brokerId +
-                  " is already registered with a valid session");
-          }
+        // Basic validations
+        if (heartbeatManager.hasValidSession(brokerId)) {
+            // Broker already registered with valid session
+            throw new StaleBrokerEpochException("Broker " + brokerId +
+                " is already registered with a valid session");
+        }
 
-          // Create broker registration
-          BrokerRegistration registration = new BrokerRegistration.Builder()
-              .setBrokerId(brokerId)
-              .setIncarnationId(request.incarnationId())
-              .setListeners(request.listeners())
-              .setFeatures(request.features())
-              .setRack(request.rack())
-              .setFenced(true) // Initially fenced until first heartbeat
-              .setInControlledShutdown(false)
-              .setDirectories(request.logDirs())
-              .build();
+        // Create broker registration
+        BrokerRegistration registration = new BrokerRegistration.Builder()
+            .setBrokerId(brokerId)
+            .setIncarnationId(request.incarnationId())
+            .setListeners(request.listeners())
+            .setFeatures(request.features())
+            .setRack(request.rack())
+            .setFenced(true) // Initially fenced until first heartbeat
+            .setInControlledShutdown(false)
+            .setDirectories(request.logDirs())
+            .build();
 
-          // Add registration to metadata log
-          records.add(new ApiMessageAndVersion(new BrokerRegistrationRecord()
-              .setBrokerId(brokerId)
-              .setIncarnationId(request.incarnationId())
-              .setListeners(request.listeners())
-              .setFeatures(request.features())
-              .setRack(request.rack())
-              .setFenced(true)
-          ), (short) 0));
+        // Add registration to metadata log
+        records.add(new ApiMessageAndVersion(new BrokerRegistrationRecord()
+            .setBrokerId(brokerId)
+            .setIncarnationId(request.incarnationId())
+            .setListeners(request.listeners())
+            .setFeatures(request.features())
+            .setRack(request.rack())
+            .setFenced(true)
+        ), (short) 0));
 
-          // Store in local map
-          brokerRegistrations.put(brokerId, registration);
+        // Store in local map
+        brokerRegistrations.put(brokerId, registration);
 
-          return ControllerResult.of(records, new BrokerRegistrationReply());
-      }
-  }
-  {% endhighlight %}
+        return ControllerResult.of(records, new BrokerRegistrationReply());
+    }
+}
+```
 
 **Key Points:**
 
-- **Line 19**: `hasValidSession()` prevents duplicate registrations
-- **Line 31**: `setFenced(true)` marks the broker as initially non-operational
-- **Line 33**: `incarnationId` is a unique UUID for each broker instance
-- **Line 43**: Registration is recorded in the metadata log for persistence
+- **Line 15**: `hasValidSession()` prevents duplicate registrations
+- **Line 23**: `setFenced(true)` marks the broker as initially non-operational
+- **Line 25**: `incarnationId` is a unique UUID for each broker instance
+- **Line 35**: Registration is recorded in the metadata log for persistence
 
-### 2. Heartbeat Processing
+#### 2. Heartbeat Processing
 
 The controller processes regular heartbeats to maintain broker liveness:
 
-{% highlight java linenos %}
-/\*\*
+```java
+/**
+ * Processes a broker heartbeat
+ */
+public ControllerResult<BrokerHeartbeatReply> processBrokerHeartbeat(
+        BrokerHeartbeatRequestData request, long offset) {
 
-- Processes a broker heartbeat
-  \*/
-  public ControllerResult<BrokerHeartbeatReply> processBrokerHeartbeat(
-  BrokerHeartbeatRequestData request, long offset) {
-      int brokerId = request.brokerId();
-      long brokerEpoch = request.brokerEpoch();
+    int brokerId = request.brokerId();
+    long brokerEpoch = request.brokerEpoch();
 
-      BrokerRegistration registration = brokerRegistrations.get(brokerId);
-      if (registration == null) {
-          throw new StaleBrokerEpochException("Broker " + brokerId + " is not registered");
-      }
+    BrokerRegistration registration = brokerRegistrations.get(brokerId);
+    if (registration == null) {
+        throw new StaleBrokerEpochException("Broker " + brokerId + " is not registered");
+    }
 
-      // Verify broker epoch
-      if (brokerEpoch != registration.epoch()) {
-          throw new StaleBrokerEpochException("Broker epoch " + brokerEpoch +
-              " does not match expected epoch " + registration.epoch());
-      }
+    // Verify broker epoch
+    if (brokerEpoch != registration.epoch()) {
+        throw new StaleBrokerEpochException("Broker epoch " + brokerEpoch +
+            " does not match expected epoch " + registration.epoch());
+    }
 
-      // Update heartbeat timestamp
-      heartbeatManager.updateHeartbeat(brokerId, offset);
+    // Update heartbeat timestamp
+    heartbeatManager.updateHeartbeat(brokerId, offset);
 
-      List<ApiMessageAndVersion> records = new ArrayList<>();
+    List<ApiMessageAndVersion> records = new ArrayList<>();
 
-      // If broker was fenced, unfence it
-      if (registration.fenced()) {
-          records.add(new ApiMessageAndVersion(new UnfenceBrokerRecord()
-              .setBrokerId(brokerId)
-              .setBrokerEpoch(brokerEpoch)
-          ), (short) 0));
+    // If broker was fenced, unfence it
+    if (registration.fenced()) {
+        records.add(new ApiMessageAndVersion(new UnfenceBrokerRecord()
+            .setBrokerId(brokerId)
+            .setBrokerEpoch(brokerEpoch)
+        ), (short) 0));
 
-          brokerRegistrations.put(brokerId, registration.cloneWithFencing(false));
-      }
+        brokerRegistrations.put(brokerId, registration.cloneWithFencing(false));
+    }
 
-      return ControllerResult.of(records, new BrokerHeartbeatReply());
-  }
-  {% endhighlight %}
+    return ControllerResult.of(records, new BrokerHeartbeatReply());
+}
+```
 
 **Key Points:**
 
-- **Line 15**: Epoch validation prevents stale heartbeats from old broker instances
-- **Line 21**: Heartbeat timestamp is updated for failure detection
-- **Line 26**: First heartbeat unfences the broker, making it operational
+- **Line 13**: Epoch validation prevents stale heartbeats from old broker instances
+- **Line 18**: Heartbeat timestamp is updated for failure detection
+- **Line 23**: First heartbeat unfences the broker, making it operational
 
-### 3. Failure Detection
+#### 3. Failure Detection
 
 The controller periodically checks for failed brokers:
 
-{% highlight java linenos %}
-/\*\*
+```java
+/**
+ * Detects brokers that have stopped sending heartbeats
+ */
+public void checkFailedBrokers(long currentTimeMs, List<ApiMessageAndVersion> records) {
 
-- Detects brokers that have stopped sending heartbeats
-  \*/
-  public void checkFailedBrokers(long currentTimeMs, List<ApiMessageAndVersion> records) {
-      for (Map.Entry<Integer, BrokerRegistration> entry : brokerRegistrations.entrySet()) {
-          int brokerId = entry.getKey();
-          BrokerRegistration registration = entry.getValue();
+    for (Map.Entry<Integer, BrokerRegistration> entry : brokerRegistrations.entrySet()) {
+        int brokerId = entry.getKey();
+        BrokerRegistration registration = entry.getValue();
 
-          if (!registration.fenced() &&
-              heartbeatManager.hasTimedOut(brokerId, currentTimeMs)) {
+        if (!registration.fenced() &&
+            heartbeatManager.hasTimedOut(brokerId, currentTimeMs)) {
 
-              // Broker has stopped responding - fence it
-              records.add(new ApiMessageAndVersion(new FenceBrokerRecord()
-                  .setBrokerId(brokerId)
-                  .setBrokerEpoch(registration.epoch())
-              ), (short) 0));
+            // Broker has stopped responding - fence it
+            records.add(new ApiMessageAndVersion(new FenceBrokerRecord()
+                .setBrokerId(brokerId)
+                .setBrokerEpoch(registration.epoch())
+            ), (short) 0));
 
-              brokerRegistrations.put(brokerId, registration.cloneWithFencing(true));
+            brokerRegistrations.put(brokerId, registration.cloneWithFencing(true));
 
-              log.info("Broker {} has been fenced due to missed heartbeats", brokerId);
-          }
-      }
-  }
-  {% endhighlight %}
+            log.info("Broker {} has been fenced due to missed heartbeats", brokerId);
+        }
+    }
+}
+```
 
 **Key Points:**
 
-- **Line 10**: Only checks unfenced brokers for timeouts
-- **Line 11**: `hasTimedOut()` compares against configured session timeout
-- **Line 14**: Failed brokers are immediately fenced to prevent data inconsistency
+- **Line 7**: Only checks unfenced brokers for timeouts
+- **Line 8**: `hasTimedOut()` compares against configured session timeout
+- **Line 11**: Failed brokers are immediately fenced to prevent data inconsistency
 
-## Broker-Side Implementation
+### Broker-Side Implementation
 
-### BrokerLifecycleManager - The Broker Side
+#### BrokerLifecycleManager - The Broker Side
 
 The `BrokerLifecycleManager` handles the complete lifecycle of a broker:
 
-{% highlight java linenos %}
+```java
 // From: metadata/src/main/java/org/apache/kafka/metadata/BrokerLifecycleManager.java
 
-/\*\*
+/**
+ * Manages the lifecycle of a broker in the Kafka cluster
+ */
+public class BrokerLifecycleManager implements AutoCloseable {
 
-- Manages the lifecycle of a broker in the Kafka cluster
-  \*/
-  public class BrokerLifecycleManager implements AutoCloseable {
-      private final int brokerId;
-      private final Uuid incarnationId;
-      private final BrokerToControllerChannelManager channelManager;
+    private final int brokerId;
+    private final Uuid incarnationId;
+    private final BrokerToControllerChannelManager channelManager;
 
-      private volatile State state = State.STARTING;
-      private volatile long brokerEpoch = -1L;
+    private volatile State state = State.STARTING;
+    private volatile long brokerEpoch = -1L;
 
-      // Possible broker states
-      enum State {
-          STARTING,           // Startup in progress
-          REGISTERING,        // Registration in progress
-          REGISTERED,         // Successfully registered
-          HEARTBEATING,       // Sending heartbeats
-          CONTROLLED_SHUTDOWN,// Controlled shutdown in progress
-          SHUTTING_DOWN       // Shutdown in progress
-      }
+    // Possible broker states
+    enum State {
+        STARTING,           // Startup in progress
+        REGISTERING,        // Registration in progress
+        REGISTERED,         // Successfully registered
+        HEARTBEATING,       // Sending heartbeats
+        CONTROLLED_SHUTDOWN,// Controlled shutdown in progress
+        SHUTTING_DOWN       // Shutdown in progress
+    }
 
-      /**
-       * Starts the broker registration process
-       */
-      public void start(Supplier<Long> highWaterMarkSupplier,
-                       BrokerToControllerChannelManager channelManager,
-                       String clusterId,
-                       Collection<Endpoint> advertisedListeners,
-                       Map<String, VersionRange> supportedFeatures) {
+    /**
+     * Starts the broker registration process
+     */
+    public void start(Supplier<Long> highWaterMarkSupplier,
+                     BrokerToControllerChannelManager channelManager,
+                     String clusterId,
+                     Collection<Endpoint> advertisedListeners,
+                     Map<String, VersionRange> supportedFeatures) {
 
-          this.state = State.REGISTERING;
-          log.info("Starting broker lifecycle manager for broker {}", brokerId);
+        this.state = State.REGISTERING;
+        log.info("Starting broker lifecycle manager for broker {}", brokerId);
 
-          // Send registration request
-          sendBrokerRegistrationRequest(
-              highWaterMarkSupplier,
-              clusterId,
-              advertisedListeners,
-              supportedFeatures
-          );
-      }
-  }
-  {% endhighlight %}
+        // Send registration request
+        sendBrokerRegistrationRequest(
+            highWaterMarkSupplier,
+            clusterId,
+            advertisedListeners,
+            supportedFeatures
+        );
+    }
+}
+```
 
 **Key Points:**
 
 - **Line 9**: `incarnationId` is generated once per broker startup
-- **Line 15**: State machine tracks broker lifecycle
-- **Line 33**: Registration is the first step after startup
+- **Line 12**: State machine tracks broker lifecycle
+- **Line 29**: Registration is the first step after startup
 
-### Registration Request Handler
+#### Registration Request Handler
 
-{% highlight java linenos %}
-/\*\*
+```java
+/**
+ * Sends a broker registration request to the controller
+ */
+private void sendBrokerRegistrationRequest(
+        Supplier<Long> highWaterMarkSupplier,
+        String clusterId,
+        Collection<Endpoint> advertisedListeners,
+        Map<String, VersionRange> supportedFeatures) {
 
-- Sends a broker registration request to the controller
-  \*/
-  private void sendBrokerRegistrationRequest(
-  Supplier<Long> highWaterMarkSupplier,
-  String clusterId,
-  Collection<Endpoint> advertisedListeners,
-  Map<String, VersionRange> supportedFeatures) {
-      // Build the request
-      BrokerRegistrationRequestData request = new BrokerRegistrationRequestData()
-          .setBrokerId(brokerId)
-          .setClusterId(clusterId)
-          .setIncarnationId(incarnationId)
-          .setListeners(buildListenerCollection(advertisedListeners))
-          .setFeatures(buildFeatureCollection(supportedFeatures))
-          .setRack(config.rack)
-          .setLogDirs(logDirs);
+    // Build the request
+    BrokerRegistrationRequestData request = new BrokerRegistrationRequestData()
+        .setBrokerId(brokerId)
+        .setClusterId(clusterId)
+        .setIncarnationId(incarnationId)
+        .setListeners(buildListenerCollection(advertisedListeners))
+        .setFeatures(buildFeatureCollection(supportedFeatures))
+        .setRack(config.rack)
+        .setLogDirs(logDirs);
 
-      // Send request asynchronously
-      channelManager.sendRequest(
-          new BrokerRegistrationRequest.Builder(request),
-          new BrokerRegistrationResponseHandler()
-      );
+    // Send request asynchronously
+    channelManager.sendRequest(
+        new BrokerRegistrationRequest.Builder(request),
+        new BrokerRegistrationResponseHandler()
+    );
 
-      log.info("Sent broker registration request for broker {} with incarnation {}",
-          brokerId, incarnationId);
-  }
-  {% endhighlight %}
-
-**Key Points:**
-
-- **Line 14**: `incarnationId` uniquely identifies this broker instance
-- **Line 15**: `listeners` specify network endpoints for client connections
-- **Line 16**: `features` indicate supported Kafka features
-- **Line 21**: Asynchronous request prevents blocking the broker startup
-
-### Heartbeat Management
-
-{% highlight java linenos %}
-/\*\*
-
-- Periodic heartbeat event
-  \*/
-  private class BrokerHeartbeatEvent implements EventQueue.Event {
-      @Override
-      public void run() throws Exception {
-
-          if (state != State.HEARTBEATING) {
-              // Not in heartbeat mode, stop
-              return;
-          }
-
-          // Build heartbeat request
-          BrokerHeartbeatRequestData request = new BrokerHeartbeatRequestData()
-              .setBrokerId(brokerId)
-              .setBrokerEpoch(brokerEpoch)
-              .setCurrentMetadataOffset(getCurrentMetadataOffset())
-              .setWantFence(false)
-              .setWantShutDown(state == State.CONTROLLED_SHUTDOWN);
-
-          // Send heartbeat
-          channelManager.sendRequest(
-              new BrokerHeartbeatRequest.Builder(request),
-              new BrokerHeartbeatResponseHandler()
-          );
-
-          // Schedule next heartbeat
-          eventQueue.scheduleDeferred("broker-heartbeat",
-              new BrokerHeartbeatEvent(),
-              config.brokerHeartbeatIntervalMs);
-      }
-  }
-  {% endhighlight %}
+    log.info("Sent broker registration request for broker {} with incarnation {}",
+        brokerId, incarnationId);
+}
+```
 
 **Key Points:**
 
-- **Line 9**: State check prevents unnecessary heartbeats
-- **Line 18**: `currentMetadataOffset` tells controller what metadata version broker has
-- **Line 20**: `wantShutDown` signals graceful shutdown intent
-- **Line 29**: Self-scheduling creates periodic heartbeat loop
+- **Line 13**: `incarnationId` uniquely identifies this broker instance
+- **Line 14**: `listeners` specify network endpoints for client connections
+- **Line 15**: `features` indicate supported Kafka features
+- **Line 20**: Asynchronous request prevents blocking the broker startup
 
-## Broker Lifecycle States
+#### Heartbeat Management
 
-### Complete Lifecycle Flow
+```java
+/**
+ * Periodic heartbeat event
+ */
+private class BrokerHeartbeatEvent implements EventQueue.Event {
+
+    @Override
+    public void run() throws Exception {
+
+        if (state != State.HEARTBEATING) {
+            // Not in heartbeat mode, stop
+            return;
+        }
+
+        // Build heartbeat request
+        BrokerHeartbeatRequestData request = new BrokerHeartbeatRequestData()
+            .setBrokerId(brokerId)
+            .setBrokerEpoch(brokerEpoch)
+            .setCurrentMetadataOffset(getCurrentMetadataOffset())
+            .setWantFence(false)
+            .setWantShutDown(state == State.CONTROLLED_SHUTDOWN);
+
+        // Send heartbeat
+        channelManager.sendRequest(
+            new BrokerHeartbeatRequest.Builder(request),
+            new BrokerHeartbeatResponseHandler()
+        );
+
+        // Schedule next heartbeat
+        eventQueue.scheduleDeferred("broker-heartbeat",
+            new BrokerHeartbeatEvent(),
+            config.brokerHeartbeatIntervalMs);
+    }
+}
+```
+
+**Key Points:**
+
+- **Line 8**: State check prevents unnecessary heartbeats
+- **Line 17**: `currentMetadataOffset` tells controller what metadata version broker has
+- **Line 19**: `wantShutDown` signals graceful shutdown intent
+- **Line 28**: Self-scheduling creates periodic heartbeat loop
+
+### Broker Lifecycle States
+
+#### Complete Lifecycle Flow
 
 1. **STARTING**: Broker initializes components
 2. **REGISTERING**: Sends registration request to controller
@@ -353,76 +353,76 @@ The `BrokerLifecycleManager` handles the complete lifecycle of a broker:
 5. **CONTROLLED_SHUTDOWN**: Graceful shutdown in progress
 6. **SHUTTING_DOWN**: Final shutdown phase
 
-### State Transitions
+#### State Transitions
 
-{% highlight java linenos %}
-/\*\*
+```java
+/**
+ * Registration response handler
+ */
+private class BrokerRegistrationResponseHandler implements RequestCompletionHandler {
 
-- Registration response handler
-  \*/
-  private class BrokerRegistrationResponseHandler implements RequestCompletionHandler {
-      @Override
-      public void onComplete(ClientResponse response) {
+    @Override
+    public void onComplete(ClientResponse response) {
 
-          BrokerRegistrationResponse registrationResponse =
-              (BrokerRegistrationResponse) response.responseBody();
+        BrokerRegistrationResponse registrationResponse =
+            (BrokerRegistrationResponse) response.responseBody();
 
-          Errors error = Errors.forCode(registrationResponse.data().errorCode());
+        Errors error = Errors.forCode(registrationResponse.data().errorCode());
 
-          switch (error) {
-              case NONE:
-                  // Registration successful
-                  brokerEpoch = registrationResponse.data().brokerEpoch();
-                  state = State.REGISTERED;
+        switch (error) {
+            case NONE:
+                // Registration successful
+                brokerEpoch = registrationResponse.data().brokerEpoch();
+                state = State.REGISTERED;
 
-                  log.info("Broker {} successfully registered with epoch {}",
-                      brokerId, brokerEpoch);
+                log.info("Broker {} successfully registered with epoch {}",
+                    brokerId, brokerEpoch);
 
-                  // Start heartbeating
-                  startHeartbeating();
-                  break;
+                // Start heartbeating
+                startHeartbeating();
+                break;
 
-              case DUPLICATE_BROKER_REGISTRATION:
-                  log.error("Duplicate broker registration for broker {}", brokerId);
-                  scheduleReregistration("Duplicate registration");
-                  break;
+            case DUPLICATE_BROKER_REGISTRATION:
+                log.error("Duplicate broker registration for broker {}", brokerId);
+                scheduleReregistration("Duplicate registration");
+                break;
 
-              case INVALID_BROKER_ID:
-                  log.error("Invalid broker ID {}", brokerId);
-                  // Stop broker - invalid ID
-                  eventQueue.append(() -> shutdown());
-                  break;
+            case INVALID_BROKER_ID:
+                log.error("Invalid broker ID {}", brokerId);
+                // Stop broker - invalid ID
+                eventQueue.append(() -> shutdown());
+                break;
 
-              default:
-                  log.error("Broker registration failed with error: {}", error);
-                  scheduleReregistration("Registration failed: " + error);
-                  break;
-          }
-      }
-  }
-  {% endhighlight %}
+            default:
+                log.error("Broker registration failed with error: {}", error);
+                scheduleReregistration("Registration failed: " + error);
+                break;
+        }
+    }
+}
+```
 
 **Key Points:**
 
-- **Line 17**: Successful registration stores the assigned epoch
-- **Line 24**: Heartbeating starts immediately after registration
-- **Line 31**: Invalid broker ID causes immediate shutdown
-- **Line 37**: Other errors trigger automatic re-registration
+- **Line 15**: Successful registration stores the assigned epoch
+- **Line 21**: Heartbeating starts immediately after registration
+- **Line 30**: Invalid broker ID causes immediate shutdown
+- **Line 34**: Other errors trigger automatic re-registration
 
-## ZooKeeper vs KRaft Differences
+### ZooKeeper vs KRaft Differences
 
-### ZooKeeper Mode
+#### ZooKeeper Mode
 
 In traditional ZooKeeper mode, brokers register using ephemeral znodes:
 
-{% highlight java linenos %}
+```java
 // ZooKeeper-based registration (legacy)
 String brokerPath = "/brokers/ids/" + brokerId;
 zkClient.createEphemeral(brokerPath, brokerInfo.toJsonString());
 
 // Watch for broker changes
 zkClient.subscribeChildChanges("/brokers/ids", new BrokerChangeListener());
-{% endhighlight %}
+```
 
 **Characteristics:**
 
@@ -430,11 +430,11 @@ zkClient.subscribeChildChanges("/brokers/ids", new BrokerChangeListener());
 - Failure detection via ZooKeeper session timeout
 - Controller watches for changes via ZooKeeper watchers
 
-### KRaft Mode
+#### KRaft Mode
 
 In KRaft mode, brokers communicate directly with the controller:
 
-{% highlight java linenos %}
+```java
 // KRaft-based registration (new)
 BrokerRegistrationRequest request = new BrokerRegistrationRequest.Builder(data);
 channelManager.sendRequest(request, responseHandler);
@@ -442,7 +442,7 @@ channelManager.sendRequest(request, responseHandler);
 // Direct heartbeats to controller
 BrokerHeartbeatRequest heartbeat = new BrokerHeartbeatRequest.Builder(data);
 channelManager.sendRequest(heartbeat, heartbeatHandler);
-{% endhighlight %}
+```
 
 **Characteristics:**
 
@@ -450,80 +450,74 @@ channelManager.sendRequest(heartbeat, heartbeatHandler);
 - Application-level heartbeats (no ZooKeeper session)
 - State stored in Kafka's metadata log
 
-## Protection Mechanisms
+### Protection Mechanisms
 
-### Epochs (Generations)
+#### Epochs (Generations)
 
 Each broker has an epoch that increments on each restart:
 
-{% highlight java linenos %}
+```java
 // Epoch validation prevents stale heartbeats
 if (brokerEpoch != registration.epoch()) {
-throw new StaleBrokerEpochException("Stale epoch detected");
+    throw new StaleBrokerEpochException("Stale epoch detected");
 }
-{% endhighlight %}
+```
 
-### Incarnation ID
+#### Incarnation ID
 
 UUID generated on each broker startup:
 
-{% highlight java linenos %}
+```java
 private final Uuid incarnationId = Uuid.randomUuid();
-{% endhighlight %}
+```
 
 Distinguishes different instances of the same broker ID.
 
-### Fencing
+#### Fencing
 
 Safety mechanism preventing failed brokers from processing requests:
 
 - **Fenced = true**: Broker non-operational, cannot be partition leader
 - **Fenced = false**: Broker operational, can be partition leader
 
-## Configuration Parameters
+### Configuration Parameters
 
-### Timing Parameters
+#### Timing Parameters
 
-{% highlight properties linenos %}
-
+```properties
 # Heartbeat interval (broker side)
-
 broker.heartbeat.interval.ms=2000
 
 # Session timeout (controller side)
-
 broker.session.timeout.ms=9000
 
 # Request timeout
-
 request.timeout.ms=30000
-{% endhighlight %}
+```
 
-### Retry Parameters
+#### Retry Parameters
 
-{% highlight properties linenos %}
-
+```properties
 # Reconnection backoff
-
 reconnect.backoff.ms=50
 reconnect.backoff.max.ms=1000
-{% endhighlight %}
+```
 
-## Error Handling and Recovery
+#### Error Handling and Recovery
 
-### Network Connectivity Loss
+#### Network Connectivity Loss
 
 1. Broker cannot send heartbeats
 2. Controller detects timeout and fences broker
 3. When connectivity returns, broker re-registers automatically
 
-### Controller Restart
+#### Controller Restart
 
 1. New controller reads state from metadata log
 2. Brokers detect connection loss
 3. Automatic reconnection to new controller
 
-### Split-Brain Prevention
+#### Split-Brain Prevention
 
 Multiple mechanisms prevent split-brain scenarios:
 
@@ -531,9 +525,9 @@ Multiple mechanisms prevent split-brain scenarios:
 - **Epochs**: Incremented on each change
 - **KRaft Quorum**: Distributed consensus for decisions
 
-## Monitoring and Observability
+### Monitoring and Observability
 
-### Key Metrics
+#### Key Metrics
 
 ```
 kafka.controller:type=KafkaController,name=ActiveControllerCount
@@ -541,7 +535,7 @@ kafka.server:type=BrokerTopicMetrics,name=MessagesInPerSec
 kafka.network:type=RequestMetrics,name=RequestsPerSec,request=BrokerHeartbeat
 ```
 
-### Important Log Messages
+#### Important Log Messages
 
 ```
 INFO [Controller id=0] Removed broker 1 from list of shutting down brokers
@@ -549,21 +543,21 @@ INFO [BrokerLifecycleManager] Broker 1 successfully registered with epoch 47
 WARN [BrokerLifecycleManager] Stale broker epoch detected, re-registering broker 1
 ```
 
-## Best Practices
+### Best Practices
 
-### Configuration
+#### Configuration
 
 1. **Set appropriate timeouts**: Balance between quick failure detection and false positives
 2. **Monitor heartbeat metrics**: Watch for patterns indicating network issues
 3. **Use dedicated networks**: Separate cluster traffic from client traffic when possible
 
-### Operational
+#### Operational
 
 1. **Graceful shutdowns**: Always use controlled shutdown for maintenance
 2. **Rolling restarts**: Restart brokers one at a time to maintain availability
 3. **Monitor controller logs**: Controller logs provide cluster-wide view of membership changes
 
-## Conclusion
+### Conclusion
 
 Kafka's cluster membership mechanism is a sophisticated system that ensures cluster reliability and consistency. Understanding how brokers register, maintain heartbeats, and handle failures is crucial for:
 
