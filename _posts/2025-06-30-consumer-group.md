@@ -50,7 +50,7 @@ You should see output confirming 3 partitions:
 
 ## Implementation
 
-The complete Python scripts are available on my [GitHub repository](https://github.com/thomaswong25520/kafka-code/tree/main/02-group_demo_consumers). Here's what each script does:
+The complete Python scripts are available on my [GitHub repository](https://github.com/thomaswong25520/kafka-code/tree/main/07-kafka-internals-cluster-membership).
 
 - **`consumer_group_partitioned.py`**: Launches 3 consumers in a single process
 - **`partitioned_producer.py`**: Produces messages with user IDs as keys for consistent partitioning
