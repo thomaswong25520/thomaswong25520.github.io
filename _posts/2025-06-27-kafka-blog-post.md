@@ -50,7 +50,7 @@ The docker file contains 2 services: zookeeper and kafka
 Start everything with:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Python Dependencies
@@ -59,7 +59,7 @@ Then, following the same idea with the docker container to isolate our dev envir
 
 ```bash
 python3 -m venv kafka-env
-source kafka-env/bin/activate # On Windows: kafka-env\Scripts\activate
+source kafka-env/bin/activate
 ```
 
 Then install the required package:
