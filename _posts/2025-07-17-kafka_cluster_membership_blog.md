@@ -114,11 +114,11 @@ ISR (In-Sync Replicas): 3,1,2 — All replicas are up-to-date with the leader.
 
 #### Simulation of a kafka broker failure
 
-````docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 \
+```docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 \
   /usr/bin/kafka-topics \
   --bootstrap-server kafka1:9092 \
-  --describe --topic my-test-topic```
-````
+  --describe --topic my-test-topic
+```
 
 ##### Stop broker 2
 
@@ -129,3 +129,12 @@ docker stop 07-kafka-internals-cluster-membership-kafka2-1
 When we run `--describe` again
 
 <img src="/assets/media/17-07-cluster-membership/07-kafka-broker-failure.png">
+
+We can see partition leadership reassignment here as broker 2 was the leader of partition 2.
+Now, since broker 2 has been shut down, the partition 2's leader has been assigned to broker 3.
+
+Note:
+
+- The broker 2 still appear in the Replica because broker was assigned as one of the replicas
+
+- The ISR did remove broker 2 as it is now down or out-of-sync (here down), so it is not in the ISR
