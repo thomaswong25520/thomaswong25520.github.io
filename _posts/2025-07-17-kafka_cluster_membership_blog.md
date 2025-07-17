@@ -10,6 +10,8 @@ description: "Deep dive into Kafka's cluster membership mechanism, exploring how
 
 In this article, I want to show how does Zookeeper keeps track of broker registering, leaving by leveraging the logs.
 
+The complete code scripts are available on my [GitHub repository](https://github.com/thomaswong25520/kafka-code/tree/main/02-group_demo_consumers).
+
 We will see how the first broker is set as being the Controller and also see how the partition leadership is being operated.
 
 ### First step
