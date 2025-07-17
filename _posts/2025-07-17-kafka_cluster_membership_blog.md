@@ -138,4 +138,6 @@ Note:
 
 - The ISR did remove broker 2 as it is now down or out-of-sync (here down), so it is not in the ISR
 
+### Conclusion
+
 In this hands-on, we’ve tested a common real-world scenario: broker failure and how Kafka handles partition leadership reassignment in response. This kind of failure is frequent in production environments and understanding how Kafka maintains availability and consistency is critical. In future experiments, we’ll explore deeper production-grade scenarios such as controller failover, under-replicated partitions, rolling broker restarts, and consumer resilience to give a more complete view of Kafka’s fault-tolerance mechanisms
