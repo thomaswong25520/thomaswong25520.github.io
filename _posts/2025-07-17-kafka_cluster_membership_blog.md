@@ -114,7 +114,8 @@ ISR (In-Sync Replicas): 3,1,2 — All replicas are up-to-date with the leader.
 
 #### Simulation of a kafka broker failure
 
-```docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 \
+```
+docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 \
   /usr/bin/kafka-topics \
   --bootstrap-server kafka1:9092 \
   --describe --topic my-test-topic
@@ -122,9 +123,7 @@ ISR (In-Sync Replicas): 3,1,2 — All replicas are up-to-date with the leader.
 
 ##### Stop broker 2
 
-```
-docker stop 07-kafka-internals-cluster-membership-kafka2-1
-```
+`docker stop 07-kafka-internals-cluster-membership-kafka2-1`
 
 When we run `--describe` again
 
