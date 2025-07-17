@@ -26,14 +26,21 @@ Looking at the respective kafka broker logs, we see that it is all about the bro
 
 broker 3 log:
 
-`[2025-07-17 18:14:11,261] INFO [Controller id=3] 3 successfully elected as the controller. Epoch incremented to 1 and epoch zk version is now 1 (kafka.controller.KafkaController)`
+```
+[2025-07-17 18:14:11,261] INFO [Controller id=3] 3 successfully elected as the controller.Epoch incremented to 1 and epoch zk version is now 1 (kafka.controller.KafkaController)
+```
 
 broker 1 log:
 
-`[2025-07-17 18:14:11,277] DEBUG [Controller id=1] Broker 3 was elected as controller instead of broker 1 (kafka.controller.KafkaController)`
+```
+[2025-07-17 18:14:11,277] DEBUG [Controller id=1] Broker 3 was elected as controller instead of broker 1 (kafka.controller.KafkaController)
+```
 
 broker 2 log:
-`[2025-07-17 18:14:11,300] DEBUG [Controller id=2] Broker 3 was elected as controller instead of broker 2 (kafka.controller.KafkaController)`
+
+```
+[2025-07-17 18:14:11,300] DEBUG [Controller id=2] Broker 3 was elected as controller instead of broker 2 (kafka.controller.KafkaController)
+```
 
 We can see it only was a matter of ms:
 
@@ -44,3 +51,81 @@ We can see it only was a matter of ms:
 This is also verified on the `/controller` namespace on zookeeper
 
 <img src="/assets/media/17-07-cluster-membership/monitor-py.png">
+
+### Partition leadership
+
+On the `docker compose` file, set the variable `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR` to `3` to ensure availability.
+
+#### Step 1: Create a topic with replication=3, partition=3
+
+then, run this command to create `my-test-topic` with a `replication-factor` of `3` to ensure each partition of the kafka topic will be replicated to 3 brokers.
+`partitions` of `3` means that the topic's data will be split in 3 separate partition who will be distributed to brokers evenly. Since we have 3 brokers and 3 partitions, each broker will have 1 partition.
+
+```
+docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 kafka-topics --create \
+  --bootstrap-server kafka1:9092 \
+  --replication-factor 3 \
+  --partitions 3 \
+  --topic my-test-topic
+```
+
+#### Step 2: View partition leadership
+
+```
+docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 kafka-topics --describe \
+  --bootstrap-server kafka1:9092 \
+  --topic my-test-topic
+```
+
+<img src="/assets/media/17-07-cluster-membership/07-kafka-leadership-partitions.png">
+
+This means:
+
+Partition 0 is led by broker 3.
+
+Partition 1 is led by broker 1.
+
+Partition 2 is led by broker 2.
+
+Let's break down the first line to ensure we understand what happened:
+
+```
+Topic: my-test-topic   Partition: 0
+Leader: 3
+Replicas: 3,1,2
+Isr: 3,1,2
+```
+
+- Topic: my-test-topic
+- Partition: 0 — this is one of the partitions of the topic
+- Leader: 3 — Broker 3 is currently the leader for partition 0:
+  - Producers send data to this broker for this partition
+  - Consumers read from this broker for this partition
+
+If broker 3 fails, leadership will move to broker 1 or 2.
+
+Replicas: 3,1,2 — All three brokers store a copy of partition 0:
+
+- Broker 3 (leader)
+- Broker 1 (follower)
+- Broker 2 (follower)
+
+ISR (In-Sync Replicas): 3,1,2 — All replicas are up-to-date with the leader.
+
+#### Simulation of a kafka broker failure
+
+````docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 \
+  /usr/bin/kafka-topics \
+  --bootstrap-server kafka1:9092 \
+  --describe --topic my-test-topic```
+````
+
+##### Stop broker 2
+
+```
+docker stop 07-kafka-internals-cluster-membership-kafka2-1
+```
+
+When we run `--describe` again
+
+<img src="/assets/media/17-07-cluster-membership/07-kafka-broker-failure.png">
