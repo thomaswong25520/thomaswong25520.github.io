@@ -26,25 +26,25 @@ In fact, this is not the case.
 
 Looking at the respective kafka broker logs, we see that it is all about the broker who first successfully creates the zookeeper node (znode): you are right, this is a race!
 
-broker 3 log:
+#### broker 3 log:
 
 ```
 [2025-07-17 18:14:11,261] INFO [Controller id=3] 3 successfully elected as the controller.Epoch incremented to 1 and epoch zk version is now 1 (kafka.controller.KafkaController)
 ```
 
-broker 1 log:
+#### broker 1 log:
 
 ```
 [2025-07-17 18:14:11,277] DEBUG [Controller id=1] Broker 3 was elected as controller instead of broker 1 (kafka.controller.KafkaController)
 ```
 
-broker 2 log:
+#### broker 2 log:
 
 ```
 [2025-07-17 18:14:11,300] DEBUG [Controller id=2] Broker 3 was elected as controller instead of broker 2 (kafka.controller.KafkaController)
 ```
 
-We can see it only was a matter of ms:
+We can see it only was a matter of milliseconds (ms):
 
 - broker 3 created the znode at 18:14:11,261
 - broker 1 tried to create it at 18:14:11,277
@@ -83,11 +83,9 @@ docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 kafka-topics --de
 
 This means:
 
-Partition 0 is led by broker 3.
-
-Partition 1 is led by broker 1.
-
-Partition 2 is led by broker 2.
+- Partition 0 is led by broker 3.
+- Partition 1 is led by broker 1.
+- Partition 2 is led by broker 2.
 
 Let's break down the first line to ensure we understand what happened:
 
@@ -114,7 +112,7 @@ Replicas: 3,1,2 — All three brokers store a copy of partition 0:
 
 ISR (In-Sync Replicas): 3,1,2 — All replicas are up-to-date with the leader.
 
-#### Simulation of a kafka broker failure
+### Simulation of a kafka broker failure
 
 ```
 docker exec -it 07-kafka-internals-cluster-membership-kafka1-1 \
