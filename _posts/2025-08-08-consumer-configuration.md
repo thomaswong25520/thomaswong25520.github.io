@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Kafka: When max.in.flight Breaks Your Message Order"
-date: 2024-12-20
+date: 2025-08-08
 categories: [kafka, distributed-systems, streaming]
 tags: [kafka, message-ordering, max-in-flight, production]
 author: Your Name
@@ -38,6 +38,7 @@ max.in.flight.requests.per.connection = 5  # Default value
 ### Why is it critical?
 
 Imagine this scenario:
+
 1. Your producer sends 10 batches quickly (max.in.flight = 10)
 2. Batch #3 fails temporarily (network, overload...)
 3. Batches #4 to #10 are written successfully
@@ -49,7 +50,7 @@ Imagine this scenario:
 ### Docker Setup
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   kafka:
@@ -60,7 +61,7 @@ services:
     environment:
       # KRaft configuration (without Zookeeper)
       KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_PROCESS_ROLES: "broker,controller"
       # ... other configs
 ```
 
@@ -69,7 +70,7 @@ services:
 ```python
 def test_order_preservation(max_in_flight):
     """Test order with given max.in.flight value"""
-    
+
     # Producer configuration
     producer_config = {
         'bootstrap.servers': 'localhost:9092',
@@ -78,9 +79,9 @@ def test_order_preservation(max_in_flight):
         'retries': 10,
         'acks': 'all'
     }
-    
+
     producer = Producer(producer_config)
-    
+
     # Send 100 messages with same key (same partition)
     for i in range(100):
         producer.produce(
@@ -88,9 +89,9 @@ def test_order_preservation(max_in_flight):
             key=b'key1',
             value=f'msg-{i:03d}'.encode()
         )
-    
+
     producer.flush()
-    
+
     # Verify order on reception
     # ...
 ```
@@ -123,41 +124,41 @@ def test_order_preservation(max_in_flight):
 
 ### 1. Financial Services 🏦
 
-| Company | Use Case | max.in.flight | Idempotence |
-|---------|----------|---------------|-------------|
-| JP Morgan | Transactions | 1 | true |
-| Goldman Sachs | Market Data | 5 | true |
-| Visa | Payments | 1-3 | true |
+| Company       | Use Case     | max.in.flight | Idempotence |
+| ------------- | ------------ | ------------- | ----------- |
+| JP Morgan     | Transactions | 1             | true        |
+| Goldman Sachs | Market Data  | 5             | true        |
+| Visa          | Payments     | 1-3           | true        |
 
 **Principle:** Zero tolerance for disorder in financial transactions.
 
 ### 2. E-Commerce 🛒
 
-| Company | Use Case | max.in.flight | Idempotence |
-|---------|----------|---------------|-------------|
-| Amazon | Orders | 5 | true |
-| Walmart | Inventory | 5 | true |
-| Alibaba | Logs/Metrics | 10-20 | false |
+| Company | Use Case     | max.in.flight | Idempotence |
+| ------- | ------------ | ------------- | ----------- |
+| Amazon  | Orders       | 5             | true        |
+| Walmart | Inventory    | 5             | true        |
+| Alibaba | Logs/Metrics | 10-20         | false       |
 
 **Principle:** Balance between performance and order based on criticality.
 
 ### 3. Tech & Streaming 📺
 
-| Company | Use Case | max.in.flight | Idempotence |
-|---------|----------|---------------|-------------|
-| Netflix | User Events | 5-10 | true |
-| Spotify | Plays | 5 | true |
-| YouTube | Analytics | 50-100 | false |
+| Company | Use Case    | max.in.flight | Idempotence |
+| ------- | ----------- | ------------- | ----------- |
+| Netflix | User Events | 5-10          | true        |
+| Spotify | Plays       | 5             | true        |
+| YouTube | Analytics   | 50-100        | false       |
 
 **Principle:** High performance for analytics, strict order for billing.
 
 ### 4. Social Networks 💬
 
-| Company | Use Case | max.in.flight | Idempotence |
-|---------|----------|---------------|-------------|
-| LinkedIn | Posts | 5 | true |
-| Twitter | Timeline | 5 | true |
-| Meta | Metrics | 20-50 | false |
+| Company  | Use Case | max.in.flight | Idempotence |
+| -------- | -------- | ------------- | ----------- |
+| LinkedIn | Posts    | 5             | true        |
+| Twitter  | Timeline | 5             | true        |
+| Meta     | Metrics  | 20-50         | false       |
 
 ## 🎯 Best Practices
 
@@ -223,4 +224,4 @@ docker-compose down -v
 
 ---
 
-*Found this article useful? Share it and follow me for more content on distributed systems!*
+_Found this article useful? Share it and follow me for more content on distributed systems!_
